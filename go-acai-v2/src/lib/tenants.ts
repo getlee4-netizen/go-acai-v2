@@ -1,0 +1,96 @@
+import { Tenant, Product, Category, Order, DeliveryZone } from '@/types';
+
+export const mockTenants: Tenant[] = [
+  {
+    id: '1',
+    slug: 'acai-do-joao',
+    name: 'Açaí do João',
+    logo_url: null,
+    primary_color: '#d946ef',
+    whatsapp: '(11) 99999-1111',
+    address: 'Rua das Açaís, 123 - Centro, São Paulo - SP',
+    delivery_fee: 5.00,
+    minimum_order: 15.00,
+    working_hours: {
+      segunda: { open: '10:00', close: '22:00', closed: false },
+      terca: { open: '10:00', close: '22:00', closed: false },
+      quarta: { open: '10:00', close: '22:00', closed: false },
+      quinta: { open: '10:00', close: '22:00', closed: false },
+      sexta: { open: '10:00', close: '23:00', closed: false },
+      sabado: { open: '10:00', close: '23:00', closed: false },
+      domingo: { open: '10:00', close: '22:00', closed: false },
+    },
+    installments: 3,
+    price_per_km: 2.00,
+    latitude: null,
+    longitude: null,
+    cep: null,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: '2',
+    slug: 'gelateria-bella',
+    name: 'Gelateria Bella',
+    logo_url: null,
+    primary_color: '#e91e63',
+    whatsapp: '(11) 99999-2222',
+    address: 'Av. Paulista, 1000 - Bela Vista, São Paulo - SP',
+    delivery_fee: 7.50,
+    minimum_order: 20.00,
+    working_hours: {
+      segunda: { open: '11:00', close: '23:00', closed: false },
+      terca: { open: '11:00', close: '23:00', closed: false },
+      quarta: { open: '11:00', close: '23:00', closed: false },
+      quinta: { open: '11:00', close: '23:00', closed: false },
+      sexta: { open: '11:00', close: '00:00', closed: false },
+      sabado: { open: '11:00', close: '00:00', closed: false },
+      domingo: { open: '12:00', close: '22:00', closed: false },
+    },
+    installments: 4,
+    price_per_km: 2.50,
+    latitude: null,
+    longitude: null,
+    cep: null,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: '3',
+    slug: 'sorveteria-do-ze',
+    name: 'Sorveteria do Zé',
+    logo_url: null,
+    primary_color: '#3b82f6',
+    whatsapp: '(11) 99999-3333',
+    address: 'Rua do Sorvete, 456 - Vila Madalena, São Paulo - SP',
+    delivery_fee: 4.00,
+    minimum_order: 10.00,
+    working_hours: {
+      segunda: { open: '12:00', close: '22:00', closed: false },
+      terca: { open: '12:00', close: '22:00', closed: false },
+      quarta: { open: '12:00', close: '22:00', closed: false },
+      quinta: { open: '12:00', close: '22:00', closed: false },
+      sexta: { open: '12:00', close: '23:00', closed: false },
+      sabado: { open: '12:00', close: '23:00', closed: false },
+      domingo: { open: '12:00', close: '22:00', closed: false },
+    },
+    installments: 2,
+    price_per_km: 1.50,
+    latitude: null,
+    longitude: null,
+    cep: null,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
+
+export function getTenantBySlug(slug: string): Tenant | undefined {
+  return mockTenants.find(t => t.slug === slug);
+}
+
+export function getTenantById(id: string): Tenant | undefined {
+  return mockTenants.find(t => t.id === id);
+}
