@@ -36,6 +36,7 @@ import {
   Palette,
   Upload,
   Save,
+  ExternalLink,
 } from 'lucide-react';
 import { cn, formatCurrency, formatDate, getStatusColor, getStatusLabel } from '@/utils/helpers';
 import { supabase } from '@/lib/supabase';
@@ -319,6 +320,15 @@ export default function AdminPage() {
             </div>
 
             <div className="flex items-center gap-2">
+              <Link
+                href={`/app/${tenant?.slug}`}
+                target="_blank"
+                className="flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-medium bg-gradient-to-r from-acai-500 to-purple-600 text-white hover:from-acai-600 hover:to-purple-700 transition-all duration-300 shadow-sm"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Ver Loja
+              </Link>
+
               <button
                 onClick={loadOrders}
                 className="p-2.5 rounded-2xl text-dark-400 dark:text-dark-500 hover:bg-dark-100/50 dark:hover:bg-dark-800/50 hover:text-dark-600 dark:hover:text-dark-300 transition-all duration-300"
@@ -1277,24 +1287,31 @@ function LogoSettings({ tenant, onUpdate }: { tenant: Tenant; onUpdate: (data: P
     if (!file) return;
     setUploading(true);
 
-    const fileExt = file.name.split('.').pop();
-    const filePath = `${tenant.id}/logo.${fileExt}`;
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('tenantId', tenant.id);
 
-    const { error: uploadError } = await supabase.storage
-      .from('logos')
-      .upload(filePath, file, { upsert: true });
+      const res = await fetch('/api/upload-logo', {
+        method: 'POST',
+        body: formData,
+      });
 
-    if (!uploadError) {
-      const { data: urlData } = supabase.storage.from('logos').getPublicUrl(filePath);
-      const logo_url = urlData.publicUrl;
-      const { error: updateError } = await supabase.from('tenants').update({ logo_url }).eq('id', tenant.id);
-      if (!updateError) {
-        onUpdate({ logo_url });
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
+      const result = await res.json();
+
+      if (!res.ok || result.error) {
+        console.error('Upload error:', result.error);
+        return;
       }
+
+      onUpdate({ logo_url: result.logoUrl });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      console.error('Upload failed:', err);
+    } finally {
+      setUploading(false);
     }
-    setUploading(false);
   };
 
   const handleRemove = async () => {

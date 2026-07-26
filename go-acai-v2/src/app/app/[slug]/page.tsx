@@ -400,7 +400,6 @@ export default function CustomerAppPage() {
         customer_id: customer?.id || null,
         customer_name: customer?.name || 'Cliente',
         customer_phone: customer?.phone || '',
-        order_number: generatedNumber,
         items: orderItems,
         subtotal,
         delivery_fee: deliveryType === 'delivery' ? deliveryFee : 0,
@@ -438,7 +437,7 @@ export default function CustomerAppPage() {
 
     setCepLoading(true);
     try {
-      const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      const response = await fetch(`/api/cep?cep=${cleanCep}`);
       const data = await response.json();
       if (!data.erro) {
         setDeliveryAddress((prev: any) => prev ? {
