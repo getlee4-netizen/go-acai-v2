@@ -37,6 +37,7 @@ import {
   Upload,
   Save,
   ExternalLink,
+  Menu,
 } from 'lucide-react';
 import { cn, formatCurrency, formatDate, getStatusColor, getStatusLabel } from '@/utils/helpers';
 import { supabase } from '@/lib/supabase';
@@ -115,6 +116,7 @@ export default function AdminPage() {
   const [newOrdersCount, setNewOrdersCount] = useState(0);
   const [prevActiveCount, setPrevActiveCount] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const playNotificationSound = useCallback(() => {
     try {
@@ -264,10 +266,18 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-dark-50/50 dark:bg-dark-950 flex">
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+
       {/* Sidebar */}
-      <aside className="fixed left-0 top-0 h-screen w-64 bg-white/80 dark:bg-dark-900/80 backdrop-blur-xl border-r border-dark-200/50 dark:border-dark-700/50 flex flex-col z-40">
-        <div className="p-5 border-b border-dark-200/50 dark:border-dark-700/50">
-          <Link href="/admin" className="flex items-center gap-3 group">
+      <aside className={cn(
+        "fixed left-0 top-0 h-screen w-64 bg-white/80 dark:bg-dark-900/80 backdrop-blur-xl border-r border-dark-200/50 dark:border-dark-700/50 flex flex-col z-50 transition-transform duration-300",
+        "lg:translate-x-0",
+        sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+      )}>
+        <div className="p-5 border-b border-dark-200/50 dark:border-dark-700/50 flex items-center justify-between">
+          <Link href="/admin" className="flex items-center gap-3 group" onClick={() => setSidebarOpen(false)}>
             <div className="relative">
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-acai-500 to-purple-600 shadow-colored group-hover:shadow-colored-lg transition-all duration-300">
                 <span className="text-white font-bold text-lg">G</span>
@@ -278,13 +288,16 @@ export default function AdminPage() {
               <p className="text-[11px] text-dark-400 dark:text-dark-500 truncate max-w-[140px]">{tenant.name}</p>
             </div>
           </Link>
+          <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-1.5 rounded-xl hover:bg-dark-100/50 dark:hover:bg-dark-800/50">
+            <X className="h-5 w-5 text-dark-400" />
+          </button>
         </div>
 
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto" aria-label="Menu administrativo">
           {TABS.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => { setActiveTab(tab.id); setSidebarOpen(false); }}
               className={cn(
                 'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-sm font-medium transition-all duration-300',
                 activeTab === tab.id
@@ -310,11 +323,14 @@ export default function AdminPage() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 ml-64 min-h-screen overflow-y-auto">
+      <main className="flex-1 lg:ml-64 min-h-screen overflow-y-auto">
         <header className="sticky top-0 z-30 bg-white/60 dark:bg-dark-900/60 backdrop-blur-xl border-b border-dark-200/30 dark:border-dark-700/30">
-          <div className="flex items-center justify-between h-16 px-6">
-            <div className="flex items-center gap-4">
-              <h1 className="font-display font-bold text-xl text-dark-900 dark:text-white">
+          <div className="flex items-center justify-between h-14 sm:h-16 px-4 sm:px-6">
+            <div className="flex items-center gap-3">
+              <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 rounded-xl hover:bg-dark-100/50 dark:hover:bg-dark-800/50">
+                <Menu className="h-5 w-5 text-dark-600 dark:text-dark-300" />
+              </button>
+              <h1 className="font-display font-bold text-lg sm:text-xl text-dark-900 dark:text-white">
                 {TABS.find(t => t.id === activeTab)?.label}
               </h1>
             </div>
@@ -323,10 +339,17 @@ export default function AdminPage() {
               <Link
                 href={`/app/${tenant?.slug}`}
                 target="_blank"
-                className="flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-medium bg-gradient-to-r from-acai-500 to-purple-600 text-white hover:from-acai-600 hover:to-purple-700 transition-all duration-300 shadow-sm"
+                className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-medium bg-gradient-to-r from-acai-500 to-purple-600 text-white hover:from-acai-600 hover:to-purple-700 transition-all duration-300 shadow-sm"
               >
                 <ExternalLink className="h-4 w-4" />
                 Ver Loja
+              </Link>
+              <Link
+                href={`/app/${tenant?.slug}`}
+                target="_blank"
+                className="sm:hidden p-2.5 rounded-2xl bg-gradient-to-r from-acai-500 to-purple-600 text-white shadow-sm"
+              >
+                <ExternalLink className="h-4 w-4" />
               </Link>
 
               <button
@@ -351,7 +374,7 @@ export default function AdminPage() {
           </div>
         </header>
 
-        <div className="p-6">
+        <div className="p-3 sm:p-4 md:p-6">
           {activeTab === 'dashboard' && <DashboardTab tenant={tenant} orders={orders} onNavigate={setActiveTab} />}
           {activeTab === 'products' && <ProductsTab tenant={tenant} products={products} categories={categories} onRefresh={loadProducts} />}
           {activeTab === 'categories' && <CategoriesTab tenant={tenant} categories={categories} onRefresh={loadCategories} />}

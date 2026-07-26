@@ -397,7 +397,7 @@ export default function CustomerAppPage() {
 
       const newOrder = {
         tenant_id: tenant!.id,
-        customer_id: customer?.id || null,
+        customer_id: customer?.id && customer.id !== '' ? customer.id : null,
         customer_name: customer?.name || 'Cliente',
         customer_phone: customer?.phone || '',
         items: orderItems,
@@ -689,6 +689,22 @@ function AddressModal({
     reference: deliveryAddress?.reference || '',
   });
 
+  useEffect(() => {
+    if (deliveryAddress) {
+      setLocalAddress(prev => ({
+        ...prev,
+        street: deliveryAddress.street || prev.street,
+        number: deliveryAddress.number || prev.number,
+        complement: deliveryAddress.complement || prev.complement,
+        neighborhood: deliveryAddress.neighborhood || prev.neighborhood,
+        city: deliveryAddress.city || prev.city,
+        state: deliveryAddress.state || prev.state,
+        zip_code: deliveryAddress.zip_code || prev.zip_code,
+        reference: deliveryAddress.reference || prev.reference,
+      }));
+    }
+  }, [deliveryAddress?.zip_code, deliveryAddress?.street, deliveryAddress?.neighborhood]);
+
   const updateField = (field: string, value: string) => {
     setLocalAddress(prev => ({ ...prev, [field]: value }));
   };
@@ -724,9 +740,18 @@ function AddressModal({
                 value={localAddress.zip_code}
                 onChange={e => updateField('zip_code', e.target.value)}
                 onBlur={e => onCepSearch(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); onCepSearch(localAddress.zip_code); }}}
+                maxLength={9}
                 disabled={cepLoading}
               />
-              {cepLoading && <Loader2 className="h-5 w-5 animate-spin text-acai-500 mt-10 mr-2" />}
+              <button
+                type="button"
+                onClick={() => onCepSearch(localAddress.zip_code)}
+                disabled={cepLoading || localAddress.zip_code.replace(/\D/g, '').length !== 8}
+                className="px-4 py-2 rounded-xl bg-acai-500 text-white font-medium text-sm hover:bg-acai-600 disabled:opacity-40 transition-all"
+              >
+                {cepLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Buscar'}
+              </button>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
