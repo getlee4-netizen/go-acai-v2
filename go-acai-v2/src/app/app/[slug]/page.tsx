@@ -383,7 +383,7 @@ export default function CustomerAppPage() {
 
     try {
       const generatedNumber = generateOrderNumber();
-      const subtotal = getCartTotal();
+      const subtotal = getCartTotal() || 0;
       const total = subtotal + (deliveryType === 'delivery' ? deliveryFee : 0);
 
       const orderItems = items.map(item => ({
@@ -405,7 +405,16 @@ export default function CustomerAppPage() {
         delivery_fee: deliveryType === 'delivery' ? deliveryFee : 0,
         total,
         address: deliveryType === 'delivery' && deliveryAddress
-          ? deliveryAddress
+          ? {
+              street: deliveryAddress.street || '',
+              number: deliveryAddress.number || '',
+              complement: deliveryAddress.complement || '',
+              neighborhood: deliveryAddress.neighborhood || '',
+              city: deliveryAddress.city || '',
+              state: deliveryAddress.state || '',
+              zip_code: deliveryAddress.zip_code || '',
+              reference: deliveryAddress.reference || '',
+            }
           : { street: 'Retirada no local', number: '', complement: '', neighborhood: '', city: '', state: '', zip_code: '' },
         payment_method: paymentMethod,
         payment_status: paymentMethod === 'pix' ? 'pending' : 'paid',
@@ -419,15 +428,19 @@ export default function CustomerAppPage() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Order insert error:', error.message, error.code, error.details);
+        throw error;
+      }
 
       setOrder(data);
       setOrderNumber(generatedNumber);
       clearCart();
       nextStep();
-    } catch (err) {
-      console.error(err);
-      alert('Erro ao finalizar pedido');
+    } catch (err: any) {
+      console.error('Checkout error:', err);
+      const msg = err?.message || err?.error?.message || JSON.stringify(err);
+      alert('Erro ao finalizar pedido: ' + msg);
     }
   };
 
