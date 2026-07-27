@@ -89,6 +89,42 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: linkError.message }, { status: 400 });
     }
 
+    // Seed demo categories
+    const demoCategories = [
+      { tenant_id: tenant.id, name: 'Açaí', icon: '🍇', display_order: 1, is_active: true },
+      { tenant_id: tenant.id, name: 'Sorvetes', icon: '🍦', display_order: 2, is_active: true },
+      { tenant_id: tenant.id, name: 'Cremes', icon: '🥄', display_order: 3, is_active: true },
+      { tenant_id: tenant.id, name: 'Complementos', icon: '🍯', display_order: 4, is_active: true },
+    ];
+    const { data: cats } = await supabaseAdmin.from('categories').insert(demoCategories).select();
+
+    // Seed demo products
+    if (cats && cats.length > 0) {
+      const acaiCatId = cats.find(c => c.name === 'Açaí')?.id;
+      const sorveteCatId = cats.find(c => c.name === 'Sorvetes')?.id;
+      const cremeCatId = cats.find(c => c.name === 'Cremes')?.id;
+      const compCatId = cats.find(c => c.name === 'Complementos')?.id;
+
+      const demoProducts = [
+        { tenant_id: tenant.id, category_id: acaiCatId, name: 'Açaí Tradicional', description: 'Açaí puro com granola e banana', price: 18.90, is_available: true, display_order: 1, prep_time_minutes: 5, is_featured: true },
+        { tenant_id: tenant.id, category_id: acaiCatId, name: 'Açaí Premium', description: 'Açaí com frutas vermelhas e mel', price: 22.90, is_available: true, display_order: 2, prep_time_minutes: 5, is_featured: true },
+        { tenant_id: tenant.id, category_id: acaiCatId, name: 'Açaí Zero Açúcar', description: 'Açaí sem adição de açúcar', price: 20.90, is_available: true, display_order: 3, prep_time_minutes: 5, is_featured: false },
+        { tenant_id: tenant.id, category_id: sorveteCatId, name: 'Sorvete de Açaí', description: 'Sorvete cremoso de açaí', price: 16.90, is_available: true, display_order: 4, prep_time_minutes: 3, is_featured: false },
+        { tenant_id: tenant.id, category_id: cremeCatId, name: 'Creme de Cupuaçu', description: 'Creme amazônico tradicional', price: 19.90, is_available: true, display_order: 5, prep_time_minutes: 4, is_featured: true },
+        { tenant_id: tenant.id, category_id: compCatId, name: 'Leite Condensado', description: 'Adicional', price: 2.00, is_available: true, display_order: 6, prep_time_minutes: 1, is_featured: false },
+        { tenant_id: tenant.id, category_id: compCatId, name: 'Granola Extra', description: 'Adicional', price: 2.00, is_available: true, display_order: 7, prep_time_minutes: 1, is_featured: false },
+        { tenant_id: tenant.id, category_id: compCatId, name: 'Frutas da Estação', description: 'Adicional', price: 3.00, is_available: true, display_order: 8, prep_time_minutes: 2, is_featured: false },
+      ];
+      await supabaseAdmin.from('products').insert(demoProducts);
+    }
+
+    // Seed demo delivery zones
+    await supabaseAdmin.from('delivery_zones').insert([
+      { tenant_id: tenant.id, name: 'Centro', min_distance_km: 0, max_distance_km: 3, fee: 5.00, is_active: true },
+      { tenant_id: tenant.id, name: 'Bairros Próximos', min_distance_km: 3, max_distance_km: 8, fee: 8.00, is_active: true },
+      { tenant_id: tenant.id, name: 'Região Metropolitana', min_distance_km: 8, max_distance_km: 15, fee: 12.00, is_active: true },
+    ]);
+
     // Send welcome email (fire-and-forget)
     sendWelcomeEmail({
       to: email,

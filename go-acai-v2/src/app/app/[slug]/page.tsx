@@ -217,6 +217,12 @@ export default function CustomerAppPage() {
   const params = useParams();
   const slug = params.slug as string;
 
+  // Reset order store when slug changes (new tenant = fresh start)
+  useEffect(() => {
+    resetFlow();
+    clearCart();
+  }, [slug]);
+
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);

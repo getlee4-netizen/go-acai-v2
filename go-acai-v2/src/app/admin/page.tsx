@@ -204,13 +204,20 @@ export default function AdminPage() {
 
   const loadOrders = async () => {
     if (!tenant) return;
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('tenant_id', tenant.id)
-      .order('created_at', { ascending: false })
-      .limit(100);
-    if (!error) setOrders(data || []);
+    try {
+      const res = await fetch(`/api/orders?tenant_id=${tenant.id}`);
+      const data = await res.json();
+      if (data.orders) setOrders(data.orders);
+    } catch {
+      // Fallback to direct query
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('tenant_id', tenant.id)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (!error) setOrders(data || []);
+    }
   };
 
   const setupRealtime = () => {
