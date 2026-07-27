@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { sendWelcomeEmail } from '@/lib/email';
 
 function generateSlug(name: string): string {
   return name
@@ -87,6 +88,15 @@ export async function POST(request: NextRequest) {
       await supabaseAdmin.auth.admin.deleteUser(userId);
       return NextResponse.json({ error: linkError.message }, { status: 400 });
     }
+
+    // Send welcome email (fire-and-forget)
+    sendWelcomeEmail({
+      to: email,
+      storeName,
+      slug,
+      email,
+      password,
+    }).catch(err => console.error('Welcome email failed:', err));
 
     return NextResponse.json({
       success: true,
