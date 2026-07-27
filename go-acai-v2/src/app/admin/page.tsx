@@ -45,9 +45,10 @@ import { useAuth } from '@/context/AuthContext';
 
 const TABS = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'orders', label: 'Pedidos', icon: ShoppingCart },
   { id: 'products', label: 'Produtos', icon: Package },
   { id: 'categories', label: 'Categorias', icon: Tag },
-  { id: 'orders', label: 'Pedidos', icon: ShoppingCart },
+  { id: 'customers', label: 'Clientes', icon: Users },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
   { id: 'settings', label: 'Configurações', icon: Settings },
 ] as const;
@@ -103,6 +104,15 @@ interface Order {
   created_at: string;
 }
 
+interface Customer {
+  id: string;
+  name: string | null;
+  phone: string;
+  email: string | null;
+  addresses: any[];
+  created_at: string;
+}
+
 export default function AdminPage() {
   const router = useRouter();
   const { user, signOut } = useAuth();
@@ -113,6 +123,7 @@ export default function AdminPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [newOrdersCount, setNewOrdersCount] = useState(0);
   const [prevActiveCount, setPrevActiveCount] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -148,6 +159,7 @@ export default function AdminPage() {
     if (tenant) {
       loadProducts();
       loadCategories();
+      loadCustomers();
       loadOrders();
       const cleanup = setupRealtime();
 
@@ -222,6 +234,16 @@ export default function AdminPage() {
       .eq('tenant_id', tenant.id)
       .order('display_order', { ascending: true });
     if (!error) setCategories(data || []);
+  };
+
+  const loadCustomers = async () => {
+    if (!tenant) return;
+    const { data, error } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('tenant_id', tenant.id)
+      .order('created_at', { ascending: false });
+    if (!error) setCustomers(data || []);
   };
 
   const loadOrders = async () => {
@@ -415,6 +437,7 @@ export default function AdminPage() {
           {activeTab === 'products' && <ProductsTab tenant={tenant} products={products} categories={categories} onRefresh={loadProducts} />}
           {activeTab === 'categories' && <CategoriesTab tenant={tenant} categories={categories} onRefresh={loadCategories} />}
           {activeTab === 'orders' && <OrdersTab tenant={tenant} orders={orders} onRefresh={loadOrders} />}
+          {activeTab === 'customers' && <CustomersTab customers={customers} />}
           {activeTab === 'analytics' && <AnalyticsTab tenant={tenant} orders={orders} />}
           {activeTab === 'settings' && <SettingsTab tenant={tenant} onUpdate={(data) => setTenant({ ...tenant, ...data })} />}
         </div>
@@ -727,60 +750,64 @@ function CategoriesTab({ tenant, categories, onRefresh }: { tenant: Tenant; cate
     }
   };
 
+  const handleToggle = async (category: Category) => {
+    await supabase.from('categories').update({ is_active: !category.is_active }).eq('id', category.id);
+    onRefresh();
+  };
+
   const handleDelete = async (id: string) => {
-    if (confirm('Tem certeza?')) {
+    if (confirm('Tem certeza que deseja remover esta categoria?')) {
+      await fetch(`/api/products?id=${id}`, { method: 'DELETE' }).catch(() => {});
       await supabase.from('categories').delete().eq('id', id);
       onRefresh();
     }
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="font-bold text-dark-900 dark:text-white">Categorias</h2>
-        <button onClick={() => { setEditingCategory(null); resetForm(); setShowModal(true); }} className="btn-primary">
+        <div>
+          <h2 className="font-bold text-2xl text-dark-900 dark:text-white">Categorias</h2>
+          <p className="text-sm text-dark-400 dark:text-dark-500">{categories.length} categorias</p>
+        </div>
+        <button onClick={() => { setEditingCategory(null); resetForm(); setShowModal(true); }}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-acai-500 to-purple-600 text-white font-semibold text-sm hover:from-acai-600 hover:to-purple-700 transition-all shadow-lg">
           <Plus className="h-4 w-4" /> Nova Categoria
         </button>
       </div>
 
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-dark-200 dark:border-dark-700 text-left text-sm text-dark-500 dark:text-dark-400">
-                <th className="p-3 font-medium">Ícone</th>
-                <th className="p-3 font-medium">Nome</th>
-                <th className="p-3 font-medium">Ordem</th>
-                <th className="p-3 font-medium">Status</th>
-                <th className="p-3 font-medium">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-dark-200 dark:divide-dark-700">
-              {categories.map((category) => (
-                <tr key={category.id} className="hover:bg-dark-50 dark:hover:bg-dark-800/50">
-                  <td className="p-3 text-2xl">{category.icon || '📦'}</td>
-                  <td className="p-3 font-medium text-dark-900 dark:text-white">{category.name}</td>
-                  <td className="p-3 text-dark-500 dark:text-dark-400">{category.display_order}</td>
-                  <td className="p-3">
-                    <span className={cn('badge', category.is_active ? 'badge-success' : 'badge-warning')}>
-                      {category.is_active ? 'Ativa' : 'Inativa'}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => { setEditingCategory(category); setFormData({ name: category.name, icon: category.icon || '', is_active: category.is_active, display_order: category.display_order }); setShowModal(true); }} className="p-2 rounded-lg hover:bg-dark-100 dark:hover:bg-dark-800" aria-label="Editar">
-                        <Edit className="h-4 w-4 text-dark-500" />
-                      </button>
-                      <button onClick={() => handleDelete(category.id)} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20" aria-label="Excluir">
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {categories.map((category) => (
+          <div key={category.id} className="card p-5 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">{category.icon || '📦'}</span>
+                <div>
+                  <p className="font-bold text-dark-900 dark:text-white text-lg">{category.name}</p>
+                  <p className="text-xs text-dark-400 dark:text-dark-500">Ordem: {category.display_order}</p>
+                </div>
+              </div>
+              <button onClick={() => handleToggle(category)}
+                className={cn('relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
+                  category.is_active ? 'bg-acai-500' : 'bg-dark-300 dark:bg-dark-600')}>
+                <span className={cn('inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                  category.is_active ? 'translate-x-6' : 'translate-x-1')} />
+              </button>
+            </div>
+            <div className="flex items-center gap-4 pt-2 border-t border-dark-100 dark:border-dark-700/50">
+              <button onClick={() => { setEditingCategory(category); setFormData({ name: category.name, icon: category.icon || '', is_active: category.is_active, display_order: category.display_order }); setShowModal(true); }}
+                className="text-sm font-medium text-acai-600 dark:text-acai-400 hover:underline">Editar</button>
+              <button onClick={() => handleDelete(category.id)}
+                className="text-sm font-medium text-red-500 hover:underline">Remover</button>
+            </div>
+          </div>
+        ))}
+        {categories.length === 0 && (
+          <div className="col-span-full card p-12 text-center">
+            <p className="text-4xl mb-3">📂</p>
+            <p className="text-dark-400 dark:text-dark-500 font-medium">Nenhuma categoria cadastrada</p>
+          </div>
+        )}
       </div>
 
       {showModal && (
@@ -823,43 +850,25 @@ function CategoriesTab({ tenant, categories, onRefresh }: { tenant: Tenant; cate
   );
 }
 
-function OrdersTab({ tenant, orders, onRefresh }: { tenant: Tenant; orders: Order[]; onRefresh: () => void }) {
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+function CustomersTab({ customers }: { customers: Customer[] }) {
   const [search, setSearch] = useState('');
 
-  const statusOptions = [
-    { value: 'all', label: 'Todos' },
-    { value: 'pending', label: 'Pendente' },
-    { value: 'preparing', label: 'Preparando' },
-    { value: 'ready', label: 'Pronto' },
-    { value: 'out_for_delivery', label: 'Saiu para entrega' },
-    { value: 'delivered', label: 'Entregue' },
-    { value: 'cancelled', label: 'Cancelado' },
-  ];
-
-  const filteredOrders = orders.filter(order => {
-    if (filterStatus !== 'all' && order.status !== filterStatus) return false;
-    if (search && !order.customer_name.toLowerCase().includes(search.toLowerCase()) && !order.id.includes(search)) return false;
-    return true;
-  });
-
-  const handleStatusChange = async (id: string, newStatus: Order['status']) => {
-    await supabase.from('orders').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', id);
-    onRefresh();
-  };
+  const filtered = customers.filter(c =>
+    !search || (c.name && c.name.toLowerCase().includes(search.toLowerCase())) || c.phone.includes(search)
+  );
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <h2 className="font-bold text-dark-900 dark:text-white">Pedidos</h2>
-        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-dark-400" />
-            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar pedido..." className="input pl-10" />
-          </div>
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="input w-auto">
-            {statusOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-          </select>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="font-bold text-2xl text-dark-900 dark:text-white">Clientes</h2>
+          <p className="text-sm text-dark-400 dark:text-dark-500">{customers.length} clientes cadastrados</p>
+        </div>
+        <div className="relative w-full sm:w-80">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-dark-400" />
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar por nome ou telefone..."
+            className="input pl-10" />
         </div>
       </div>
 
@@ -867,68 +876,213 @@ function OrdersTab({ tenant, orders, onRefresh }: { tenant: Tenant; orders: Orde
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-dark-200 dark:border-dark-700 text-left text-sm text-dark-500 dark:text-dark-400">
-                <th className="p-3 font-medium">Pedido</th>
-                <th className="p-3 font-medium">Cliente</th>
-                <th className="p-3 font-medium">Itens</th>
-                <th className="p-3 font-medium">Total</th>
-                <th className="p-3 font-medium">Status</th>
-                <th className="p-3 font-medium">Pagamento</th>
-                <th className="p-3 font-medium">Data</th>
-                <th className="p-3 font-medium">Ações</th>
+              <tr className="border-b border-dark-200 dark:border-dark-700 text-left text-[11px] font-semibold text-dark-400 dark:text-dark-500 uppercase tracking-wider">
+                <th className="p-4">Cliente</th>
+                <th className="p-4">Telefone</th>
+                <th className="p-4">Endereço</th>
+                <th className="p-4">Status</th>
+                <th className="p-4">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-dark-200 dark:divide-dark-700">
-              {filteredOrders.map((order) => (
-                <tr key={order.id} className="hover:bg-dark-50 dark:hover:bg-dark-800/50">
-                  <td className="p-3 font-mono text-sm text-dark-900 dark:text-white">#{order.id.slice(0, 8)}</td>
-                  <td className="p-3">
-                    <p className="font-medium text-dark-900 dark:text-white">{order.customer_name}</p>
-                    <p className="text-xs text-dark-500 dark:text-dark-400">{order.customer_phone}</p>
-                  </td>
-                  <td className="p-3">
-                    <div className="max-h-16 overflow-y-auto text-sm text-dark-600 dark:text-dark-400">
-                      {order.items.map((item, i) => (
-                        <div key={i} className="flex justify-between">
-                          <span>{item.product_name} x{item.quantity}</span>
-                          <span>{formatCurrency(item.total_price)}</span>
-                        </div>
-                      ))}
+              {filtered.map((customer) => (
+                <tr key={customer.id} className="hover:bg-dark-50 dark:hover:bg-dark-800/50 transition-colors">
+                  <td className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-full bg-gradient-to-br from-acai-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                        {(customer.name || '?')[0].toUpperCase()}
+                      </div>
+                      <span className="font-semibold text-dark-900 dark:text-white">{customer.name || 'Sem nome'}</span>
                     </div>
                   </td>
-                  <td className="p-3 font-medium text-dark-900 dark:text-white">{formatCurrency(order.total)}</td>
-                  <td className="p-3">
-                    <select
-                      value={order.status}
-                      onChange={e => handleStatusChange(order.id, e.target.value as Order['status'])}
-                      className={cn('badge px-2 py-1 text-xs', getStatusColor(order.status))}
-                    >
-                      {statusOptions.filter(o => o.value !== 'all').map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
+                  <td className="p-4 text-dark-600 dark:text-dark-400">{customer.phone}</td>
+                  <td className="p-4 text-dark-600 dark:text-dark-400 text-sm max-w-xs truncate">
+                    {customer.addresses?.[0]
+                      ? `${customer.addresses[0].street || ''} ${customer.addresses[0].number || ''}, ${customer.addresses[0].neighborhood || ''} - ${customer.addresses[0].city || ''}`
+                      : '—'}
                   </td>
-                  <td className="p-3 text-dark-600 dark:text-dark-400 capitalize">{order.payment_method}</td>
-                  <td className="p-3 text-sm text-dark-500 dark:text-dark-400">{formatDate(order.created_at)}</td>
-                  <td className="p-3">
-                    {order.status === 'delivered' || order.status === 'cancelled' ? (
-                      <button onClick={() => { if (confirm('Excluir permanentemente?')) supabase.from('orders').delete().eq('id', order.id).then(onRefresh); }} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20" aria-label="Excluir">
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </button>
-                    ) : (
-                      <span className="text-xs text-dark-400">—</span>
-                    )}
+                  <td className="p-4">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+                      Ativo
+                    </span>
+                  </td>
+                  <td className="p-4">
+                    <button className="p-2 rounded-lg hover:bg-dark-100 dark:hover:bg-dark-800 transition-colors" aria-label="Editar">
+                      <Edit className="h-4 w-4 text-dark-400" />
+                    </button>
                   </td>
                 </tr>
               ))}
-              {filteredOrders.length === 0 && (
+              {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-dark-500 dark:text-dark-400">Nenhum pedido encontrado</td>
+                  <td colSpan={5} className="p-12 text-center text-dark-400 dark:text-dark-500">
+                    <p className="text-4xl mb-3">👥</p>
+                    <p className="font-medium">Nenhum cliente encontrado</p>
+                  </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function OrdersTab({ tenant, orders, onRefresh }: { tenant: Tenant; orders: Order[]; onRefresh: () => void }) {
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+
+  const statusFilters = [
+    { value: 'all', label: 'Todos' },
+    { value: 'pending', label: 'Pendente' },
+    { value: 'preparing', label: 'Preparando' },
+    { value: 'ready', label: 'Pronto' },
+    { value: 'out_for_delivery', label: 'Saiu' },
+    { value: 'delivered', label: 'Entregue' },
+    { value: 'cancelled', label: 'Cancelado' },
+  ];
+
+  const filteredOrders = orders.filter(order =>
+    filterStatus === 'all' || order.status === filterStatus
+  );
+
+  const handleStatusChange = async (id: string, newStatus: Order['status']) => {
+    await fetch('/api/orders', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status: newStatus }),
+    }).catch(async () => {
+      await supabase.from('orders').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', id);
+    });
+    onRefresh();
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Excluir permanentemente este pedido?')) {
+      await supabase.from('orders').delete().eq('id', id);
+      onRefresh();
+    }
+  };
+
+  const formatOrderDate = (date: string) => {
+    const d = new Date(date);
+    return `${d.toLocaleDateString('pt-BR')}, ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+  };
+
+  const getStatusBadge = (status: string) => {
+    const map: Record<string, { bg: string; text: string; label: string }> = {
+      pending: { bg: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-700 dark:text-amber-400', label: 'Pendente' },
+      confirmed: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-400', label: 'Confirmado' },
+      preparing: { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-700 dark:text-purple-400', label: 'Preparando' },
+      ready: { bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-700 dark:text-emerald-400', label: 'Pronto' },
+      out_for_delivery: { bg: 'bg-cyan-100 dark:bg-cyan-900/30', text: 'text-cyan-700 dark:text-cyan-400', label: 'Saiu p/ Entrega' },
+      delivered: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-400', label: 'Entregue' },
+      cancelled: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-400', label: 'Cancelado' },
+    };
+    const s = map[status] || map.pending;
+    return <span className={cn('inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold', s.bg, s.text)}>{s.label}</span>;
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-bold text-2xl text-dark-900 dark:text-white">Pedidos</h2>
+        <p className="text-sm text-dark-400 dark:text-dark-500">{filteredOrders.length} pedidos</p>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {statusFilters.map(f => (
+          <button key={f.value} onClick={() => setFilterStatus(f.value)}
+            className={cn(
+              'px-4 py-2 rounded-xl text-sm font-semibold transition-all',
+              filterStatus === f.value
+                ? 'bg-gradient-to-r from-acai-500 to-purple-600 text-white shadow-lg'
+                : 'bg-dark-100 dark:bg-dark-800 text-dark-600 dark:text-dark-400 hover:bg-dark-200 dark:hover:bg-dark-700'
+            )}>
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-4">
+        {filteredOrders.map((order) => (
+          <div key={order.id} className="card p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-3">
+                <span className="font-mono font-bold text-lg text-dark-900 dark:text-white">GO-{order.id.slice(0, 13)}</span>
+                {getStatusBadge(order.status)}
+              </div>
+              <span className="text-sm text-dark-400 dark:text-dark-500">{formatOrderDate(order.created_at)}</span>
+            </div>
+
+            <div className="grid sm:grid-cols-4 gap-4 mb-4">
+              <div>
+                <p className="text-[11px] font-semibold text-dark-400 dark:text-dark-500 uppercase tracking-wider mb-1">Cliente</p>
+                <p className="font-semibold text-dark-900 dark:text-white">{order.customer_name}</p>
+                <p className="text-sm text-dark-500 dark:text-dark-400">{order.customer_phone}</p>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold text-dark-400 dark:text-dark-500 uppercase tracking-wider mb-1">Itens</p>
+                {order.items.map((item, i) => (
+                  <p key={i} className="text-sm text-dark-700 dark:text-dark-300">{item.quantity}x {item.product_name}</p>
+                ))}
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold text-dark-400 dark:text-dark-500 uppercase tracking-wider mb-1">Pagamento</p>
+                <p className="text-sm text-dark-700 dark:text-dark-300 capitalize">{order.payment_method} — {order.payment_status === 'paid' ? 'Pago' : 'Pendente'}</p>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold text-dark-400 dark:text-dark-500 uppercase tracking-wider mb-1">Total</p>
+                <p className="font-bold text-lg text-dark-900 dark:text-white">{formatCurrency(order.total)}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-dark-100 dark:border-dark-700/50">
+              {order.status === 'pending' && (
+                <button onClick={() => handleStatusChange(order.id, 'preparing')}
+                  className="px-4 py-2 rounded-xl bg-acai-500 text-white text-sm font-semibold hover:bg-acai-600 transition-all">
+                  Iniciar Preparo
+                </button>
+              )}
+              {order.status === 'preparing' && (
+                <button onClick={() => handleStatusChange(order.id, 'ready')}
+                  className="px-4 py-2 rounded-xl bg-emerald-500 text-white text-sm font-semibold hover:bg-emerald-600 transition-all">
+                  Marcar Pronto
+                </button>
+              )}
+              {order.status === 'ready' && (
+                <button onClick={() => handleStatusChange(order.id, 'out_for_delivery')}
+                  className="px-4 py-2 rounded-xl bg-cyan-500 text-white text-sm font-semibold hover:bg-cyan-600 transition-all">
+                  Saiu p/ Entrega
+                </button>
+              )}
+              {order.status === 'out_for_delivery' && (
+                <button onClick={() => handleStatusChange(order.id, 'delivered')}
+                  className="px-4 py-2 rounded-xl bg-green-500 text-white text-sm font-semibold hover:bg-green-600 transition-all">
+                  Entregue
+                </button>
+              )}
+              {['pending', 'preparing', 'ready', 'out_for_delivery'].includes(order.status) && (
+                <button onClick={() => handleStatusChange(order.id, 'cancelled')}
+                  className="px-4 py-2 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-all">
+                  Cancelar
+                </button>
+              )}
+              {(order.status === 'delivered' || order.status === 'cancelled') && (
+                <button onClick={() => handleDelete(order.id)}
+                  className="px-4 py-2 rounded-xl bg-dark-200 dark:bg-dark-700 text-dark-600 dark:text-dark-400 text-sm font-semibold hover:bg-dark-300 dark:hover:bg-dark-600 transition-all">
+                  Apagar
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+        {filteredOrders.length === 0 && (
+          <div className="card p-12 text-center">
+            <p className="text-4xl mb-3">🛒</p>
+            <p className="text-dark-400 dark:text-dark-500 font-medium">Nenhum pedido encontrado</p>
+          </div>
+        )}
       </div>
     </div>
   );
