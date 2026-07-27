@@ -422,16 +422,20 @@ export default function CustomerAppPage() {
         notes: '',
       };
 
-      const { data, error } = await supabase
-        .from('orders')
-        .insert(newOrder)
-        .select()
-        .single();
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newOrder),
+      });
 
-      if (error) {
-        console.error('Order insert error:', error.message, error.code, error.details);
-        throw error;
+      const result = await res.json();
+
+      if (!res.ok || result.error) {
+        console.error('Order insert error:', result.error);
+        throw new Error(result.error || 'Erro ao criar pedido');
       }
+
+      const data = result.order;
 
       setOrder(data);
       setOrderNumber(generatedNumber);
