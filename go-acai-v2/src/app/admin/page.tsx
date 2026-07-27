@@ -574,7 +574,7 @@ function ProductsTab({ tenant, products, categories, onRefresh }: { tenant: Tena
 
   const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este produto?')) {
-      await supabase.from('products').delete().eq('id', id);
+      await fetch(`/api/products?id=${id}`, { method: 'DELETE' });
       onRefresh();
     }
   };

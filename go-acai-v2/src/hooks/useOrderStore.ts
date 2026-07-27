@@ -70,8 +70,8 @@ interface DeliveryAddress {
 
 const stepOrder: OrderStep[] = [
   'phone',
-  'type',
   'size',
+  'type',
   'toppings',
   'fruits',
   'extras',

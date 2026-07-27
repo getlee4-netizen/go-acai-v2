@@ -44,8 +44,8 @@ type Step = {
 
 const STEPS: readonly Step[] = [
   { id: 'phone', label: 'Telefone', icon: Smartphone },
-  { id: 'type', label: 'Base', icon: Heart },
   { id: 'size', label: 'Tamanho', icon: Circle },
+  { id: 'type', label: 'Base', icon: Heart },
   { id: 'toppings', label: 'Coberturas', icon: Star },
   { id: 'fruits', label: 'Frutas', icon: Star },
   { id: 'extras', label: 'Complementos', icon: Star },

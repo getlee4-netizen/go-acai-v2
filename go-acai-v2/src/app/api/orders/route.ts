@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { tenant_id, customer_id, customer_name, customer_phone, items, subtotal, delivery_fee, total, address, payment_method, payment_status, status, notes } = body;
 
-    if (!tenant_id || !items || !subtotal || !total) {
+    if (!tenant_id || !items || subtotal === undefined || subtotal === null || total === undefined || total === null) {
       return NextResponse.json({ error: 'Campos obrigatórios faltando' }, { status: 400 });
     }
 
