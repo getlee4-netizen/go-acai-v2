@@ -117,6 +117,7 @@ export default function AdminPage() {
   const [prevActiveCount, setPrevActiveCount] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
 
   const playNotificationSound = useCallback(() => {
     try {
@@ -149,7 +150,13 @@ export default function AdminPage() {
       loadCategories();
       loadOrders();
       const cleanup = setupRealtime();
-      return () => { cleanup?.(); };
+
+      // Polling fallback - check for new orders every 10 seconds
+      const pollInterval = setInterval(() => {
+        loadOrders();
+      }, 10000);
+
+      return () => { cleanup?.(); clearInterval(pollInterval); };
     }
   }, [tenant]);
 
@@ -160,9 +167,24 @@ export default function AdminPage() {
 
     if (prevActiveCount > 0 && activeOrders > prevActiveCount && soundEnabled) {
       playNotificationSound();
+      setToast({ message: `🔔 Novo pedido recebido!`, type: 'info' });
+      setTimeout(() => setToast(null), 5000);
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        new Notification('Novo Pedido!', {
+          body: `Você tem ${activeOrders - prevActiveCount} novo(s) pedido(s) pendente(s)`,
+          icon: '/favicon.ico',
+        });
+      }
     }
     setPrevActiveCount(activeOrders);
   }, [orders, prevActiveCount, soundEnabled, playNotificationSound]);
+
+  // Request notification permission on mount
+  useEffect(() => {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
 
   const loadTenant = async (slug: string) => {
     try {
@@ -380,6 +402,13 @@ export default function AdminPage() {
             </div>
           </div>
         </header>
+
+        {toast && (
+          <div className="mx-3 sm:mx-4 md:mx-6 mt-3 p-4 rounded-2xl bg-gradient-to-r from-acai-500 to-purple-600 text-white font-medium text-sm shadow-lg animate-[slideDown_0.3s_ease-out] flex items-center gap-3">
+            <Bell className="h-5 w-5 animate-bounce" />
+            {toast.message}
+          </div>
+        )}
 
         <div className="p-3 sm:p-4 md:p-6">
           {activeTab === 'dashboard' && <DashboardTab tenant={tenant} orders={orders} onNavigate={setActiveTab} />}
